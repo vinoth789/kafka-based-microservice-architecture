@@ -1,0 +1,171 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<head th:replace="common/header :: head"></head>
+	
+	<style>
+       /* Set the size of the div element that contains the map */
+      #map {
+        height: 400px;  /* The height is 400 pixels */
+        width: 100%;  /* The width is the width of the web page */
+       }
+    </style>
+</head>
+<body>
+	<div th:replace="common/header :: top-navigation">...</div>
+
+	<!-- Add page specific code/html START -->
+	
+	<div class="container">
+
+		<div class="page-header">
+			<h1>Vehicle location</h1>
+		</div>
+		
+		
+		<div class="row" >
+		<div class="col-md-6">
+		
+		
+		
+		
+		
+		
+		<div class="panel panel-default" th:fragment="listUserData" id="listUserData">
+  <div class="panel-heading">
+    <h3 class="panel-title">Places visited</h3>
+  </div>
+  <div class="panel-body">
+    <div class="table-responsive">
+		        <table class="table table-striped" id="kafka-messages">
+		            <thead>
+		                <tr>
+		                	<th>Vehicle ID</th>
+		                    <th>location</th>
+		                    <th>Vehicle latitude</th>
+		                    <th>Vehicle longitude</th>
+
+		                </tr>
+		            </thead>
+		            
+		        </table>
+		       </div>
+  </div>
+</div>
+		
+		
+		</div>
+		
+		
+		<div class="col-md-6">
+		
+		
+		 <div id="map"></div>
+		
+		
+		</div>
+		</div>
+		
+	</div>
+	
+	<div th:replace="common/footer :: footer">...</div>
+	
+	<!-- Add page specific code/html END -->
+	<script type="text/javascript" 	th:src="@{../js/jquery.sse.js}"></script>
+
+
+
+	 <script>
+	 
+	 
+/* 	var markers = [
+	    ['Bondi Beach', -33.890542, 151.274856],
+	    ['Coogee Beach', -33.923036, 151.259052],
+	    ['Cronulla Beach', -34.028249, 151.157507],
+	    ['Manly Beach', -33.80010128657071, 151.28747820854187],
+	    ['Maroubra Beach', -33.950198, 151.259302]
+	]; */
+var	arr = new Array ();
+
+	function initializeMaps(markers) {
+	    var myOptions = {
+	        mapTypeId: google.maps.MapTypeId.ROADMAP,
+	        mapTypeControl: false
+	    };
+	    var map = new google.maps.Map(document.getElementById("map"),myOptions);
+	    var infowindow = new google.maps.InfoWindow(); 
+	    var marker, i;
+	    var bounds = new google.maps.LatLngBounds();
+
+	    for (i in markers) {
+	        var pos = new google.maps.LatLng(markers[i][1], markers[i][2]);
+	        bounds.extend(pos);
+	        marker = new google.maps.Marker({
+	            position: pos,
+	            map: map
+	        });
+	        google.maps.event.addListener(marker, 'click', (function(marker, i) {
+	            return function() {
+	            	var content = markers[i][0]+", time: "+markers[i][3];
+	                infowindow.setContent(content);
+	                infowindow.open(map, marker);
+	            }
+	        }
+	    )(marker, i));
+	    }
+	    map.fitBounds(bounds);
+	}
+// Initialize and add the map
+
+$( document ).ready(function() {
+	
+	var sse = $.SSE('/kafka-messages', {
+	    onMessage: function(e){ 
+	        console.log(e.data); 
+	         var obj = JSON.parse(e.data);
+	         //arr.push("'"+obj.name+"' ,"+obj.lat+" ,"+obj.lon);
+	         arr.push([obj.name,obj.lat,obj.lon,obj.time]);
+	         
+	         //arr.push(obj);
+	         //const [name, lat, lon] = arr; 
+	         //alert(arr[0][1]);
+	         var markers = new Array ( );
+	         for (i in arr) {
+	        	
+	         markers[i] = new Array ( arr[i][0], arr[i][1], arr[i][2], arr[i][3]);
+
+	         }
+	         //markers[1] = new Array ( 'Coogee Beach', -33.923036, 151.259052);
+	         //markers[2] = new Array ( 'Cronulla Beach', -34.028249, 151.157507);
+	         initializeMaps(markers);
+	         //arr.push("lat: "+obj.lat+", lng: "+obj.lon);
+	         //arr.push(obj.lat+":"+obj.lon);
+	         //initMap(obj.lat,obj.lon);
+	         //initMap(arr);
+	        $('#kafka-messages tr:last').after('<tr><td>'+obj.vid+'</td><td>'+obj.name+'</td><td>'+obj.lat+'</td><td>'+obj.lon+'</td></tr>');
+	        	  // The marker, positioned at Uluru
+	        	  //initMap();
+	    },
+	    onError: function(e){ 
+	    	sse.stop();
+	        console.log("Could not connect..Stopping SSE"); 
+	    },
+	    onEnd: function(e){ 
+	        console.log("End"); 
+	    }
+	});
+	sse.start();
+  
+});
+    </script>
+    
+    <!--Load the API from the specified URL
+    * The async attribute allows the browser to render the page while the API loads
+    * The key parameter will contain your own API key (which is not needed for this tutorial)
+    * The callback parameter executes the initMap() function
+    -->
+    <script async='async' defer='defer' src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsU6EGlxAF8pcR6XAriMlySRMKB3XDi5g&amp;callback=initializeMaps">
+    </script>
+    
+</body>
+</html>
